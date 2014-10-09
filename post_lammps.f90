@@ -1,4 +1,5 @@
 program post_lammps
+
 use mData_Proc
 use mString
 implicit none
@@ -20,7 +21,7 @@ real(rb),      allocatable :: value(:)
 real(rb),      allocatable :: vmin(:), vmax(:), delta(:)
 integer,       allocatable :: histo(:,:), bin
 
-integer       :: i, j, first, nbins
+integer       :: i, j, first, nbins, skip
 character(sl) :: infile, action, line
 character(12) :: C
 real(rb)      :: rval
@@ -30,7 +31,7 @@ if (iargc() < 3) then
   write(6,'("Usage: post_lammps action <args> <file name> <property 1> <property 2> ...")')
   write(6,'("  action = block or extract or histogram")')
   write(6,'("    block args = none")')
-  write(6,'("    extract args = none")')
+  write(6,'("    extract args = skip")')
   write(6,'("    histogram args = number-of-bins")')
   stop
 end if
@@ -41,7 +42,13 @@ if (trim(action) == "histogram") then
   narg = 1
   call getarg( 2, line )
   nbins = str2int( line )
-else if ( (trim(action) == "block").or.(trim(action) == "extract") ) then
+  if (nbins <= 0) stop "Unacceptable number of bins"
+else if (trim(action) == "extract") then
+  narg = 1
+  call getarg( 2, line )
+  skip = str2int( line )
+  if (skip < 0) stop "Unacceptable value of skip parameter"
+else if (trim(action) == "block") then
   narg = 0
 else
   write(*,'("Error: specified action was not recognized")')
@@ -80,7 +87,6 @@ select case (trim(action))
     histo = 0
 end select
 
-! Perform the blocking analysis:
 open( unit = 10, file = infile, status = "old" )
 write(C,*) first-2
 read(10,'('//C//'/)')
@@ -97,11 +103,13 @@ do j = 1, npoints
         call Block(i)%Exec( 1, value )
       end do
     case ("extract")
-      write(6,'(A)',advance="no") trim(arg(indx(1)))
-      do i = 2, np
-        write(6,'(A,A)',advance="no") sep, trim(arg(indx(i)))
-      end do
-      write(6,'()')
+      if (mod(j-1,skip+1) == 0) then
+        write(6,'(A)',advance="no") trim(arg(indx(1)))
+        do i = 2, np
+          write(6,'(A,A)',advance="no") sep, trim(arg(indx(i)))
+        end do
+        write(6,'()')
+       end if
      case ("histogram")
        vmin = min(vmin,value)
        vmax = max(vmax,value)

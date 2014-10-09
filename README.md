@@ -17,6 +17,6 @@ Usage
 post_lammps action [args] [file name] [property 1] [property 2] ...<br>
   action = block or extract or histogram<br>
     block args = none<br>
-    extract args = none<br>
-    histogram args = number-of-bins<br>
+    extract args = skip<br>
+    histogram args = nbins<br>
 
