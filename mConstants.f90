@@ -1,6 +1,7 @@
 module mConstants
-integer,  parameter :: rb = 8
-integer,  parameter :: sl = 500
+character,    parameter :: sep = ","
+integer,      parameter :: rb = 8
+integer,      parameter :: sl = 500
 character(3), parameter :: csl = "500"
 real(rb), parameter :: zero  = 0.0_rb, &
                        half  = 0.5_rb, &
