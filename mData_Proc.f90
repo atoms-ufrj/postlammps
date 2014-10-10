@@ -268,8 +268,8 @@ contains
     real(rb),         intent(in)    :: Data(a%Props%Total)
     integer :: i
     character(sl) :: C
-    write(C,*) Step
-    do i = 1, a%Props%Total
+    write(C,*) Data(i)
+    do i = 2, a%Props%Total
       write(a%unit,'(A,A)',advance="no") trim(C), a%Props%separator
       write(C,*) Data(i)
     end do
@@ -369,7 +369,8 @@ contains
     real(rb)  :: Mean(a%Props%Total,0:a%levels), Var(a%Props%Total,0:a%levels)
     character :: sep
     logical   :: print_titles
-    character(sl) :: C, D
+    character(1000) :: C
+    character(sl)   :: D
 
     print_titles = .true.; if (present(titles)) print_titles = titles
     out = 6; if (present(unit)) out = unit
@@ -509,7 +510,7 @@ contains
     character,         intent(in), optional :: separator
     integer :: out, i, level, prop, ndata
     character :: sep
-    character(sl) :: C
+    character(1000) :: C
     if (present(unit)) then
       out = unit
     else

@@ -15,8 +15,12 @@ Usage
 -----
 
 post_lammps action [args] [file name] [property 1] [property 2] ...<br>
-  action = block or extract or histogram<br>
+  action = acf or block or eacf or extract or histogram or list or stats<br>
+    acf args = window<br>
     block args = none<br>
+    eacf args = window<br>
     extract args = skip<br>
     histogram args = nbins<br>
+    list args = none<br>
+    stats args = none<br>
 
