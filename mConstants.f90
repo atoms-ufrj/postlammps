@@ -1,5 +1,4 @@
 module mConstants
-character,    parameter :: sep = ","
 integer,      parameter :: rb = 8
 integer,      parameter :: sl = 100
 character(3), parameter :: csl = "100"

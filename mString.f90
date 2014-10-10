@@ -129,7 +129,7 @@ contains
     integer                  :: i
     integer :: ioerr
     read(str,*,iostat=ioerr) i
-    if (ioerr /= 0) stop "ERROR: bad integer"
+    if (ioerr /= 0) call error( str, "is not an integer number" )
   end function
 
   !=================================================================================================
@@ -139,7 +139,7 @@ contains
     real(rb)                 :: r
     integer :: ioerr
     read(str,*,iostat=ioerr) r
-    if (ioerr /= 0) stop "ERROR: bad real number"
+    if (ioerr /= 0) call error( str, "is not a real number" )
   end function
 
   !=================================================================================================

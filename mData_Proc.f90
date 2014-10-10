@@ -418,7 +418,7 @@ contains
       function join( a, b ) result( c )
         character(*), intent(in) :: a
         real(rb),     intent(in) :: b
-        character(sl)            :: c
+        character(1000)          :: c
         write(c,*) b
         c = trim(adjustl(a))//sep//trim(adjustl(c))
       end function join

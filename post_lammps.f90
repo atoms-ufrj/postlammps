@@ -10,20 +10,23 @@ character(sl)      :: arg(maxnarg)
 
 integer            :: iarg, n
 
-character(5), parameter :: keyword(1) = ["-skip"]
+character(5), parameter :: keyword(2) = ["-skip","-sep "]
+integer :: skip
+character :: sep
 
 integer                    :: np, nlines, npoints
 character(sl), allocatable :: property(:)
 integer,       allocatable :: indx(:)
 real(rb),      allocatable :: value(:,:)
 
-integer       :: i, j, first, nbins, window, skip
+integer       :: i, j, first, nbins, window
 character(sl) :: infile, action, line
 logical       :: exist
 character(12) :: C
 
 ! Defaults:
 skip = 0
+sep = ","
 
 ! Read options:
 iarg = 1
@@ -35,7 +38,16 @@ do while (any(keyword == line))
       iarg = iarg + 1
       call getarg( iarg, line )
       skip = str2int( line )
-      if (skip < 0) stop "Unacceptable value of skip parameter"
+      if (skip < 0) call error( "Unacceptable value of skip parameter" )
+    case ("-sep")
+      iarg = iarg + 1
+      call getarg( iarg, line )
+      select case (trim(line))
+        case ("comma"); sep = ","
+        case ("space"); sep = " "
+        case ("semicolon"); sep = ";"
+        case default; call error( "Unacceptable separator" )
+      end select
   end select
   iarg = iarg + 1
   call getarg( iarg, line )
@@ -46,24 +58,24 @@ call getarg( iarg, action )
 
 ! Check specified action:
 select case (trim(action))
-  case ("acf","eacf","histogram"); n = 1
-  case ("block","ineff","extract","list","stats"); n = 0
-  case default; call Usage_Message
+  case ("acf","acfn","histo"); n = 1
+  case ("block","ineff","print","props","stats"); n = 0
+  case default; call error( "Unrecognized action", action )
 end select
 
 ! Read action arguments:
 if (iargc() < iarg + n) call Usage_Message
 select case (trim(action))
-  case ("acf","eacf")
+  case ("acf","acfn")
     iarg = iarg + 1
     call getarg( iarg, line )
     window = str2int( line )
-    if (window <= 0) stop "Unacceptable maximum window size"
-  case ("histogram")
+    if (window <= 0) call error( "Unacceptable maximum window size" )
+  case ("histo")
     iarg = iarg + 1
     call getarg( iarg, line )
     nbins = str2int( line )
-    if (nbins <= 0) stop "Unacceptable number of bins"
+    if (nbins <= 0) call error( "Unacceptable number of bins" )
 end select
 
 ! Read file name:
@@ -71,20 +83,17 @@ iarg = iarg + 1
 if (iargc() < iarg) call Usage_Message
 call getarg( iarg, infile )
 inquire( file = infile, exist = exist )
-if (.not.exist) then
-  write(6,'("Error: specified file <",A,"> does not exist.")') trim(infile)
-  stop
-end if
+if (.not.exist) call error( "specified file <", infile, "> does not exist." )
 
 ! Perform listing action, if specified:
-if (trim(action) == "list") then
+if (trim(action) == "props") then
   call List_Properties( infile )
   stop
 end if
 
 ! Read property names:
 np = iargc() - iarg
-if (np == 0) stop "No properties specified."
+if (np == 0) call error( "No properties specified." )
 allocate( property(np), indx(np) )
 do i = 1, np
   call getarg( iarg + i, property(i) )
@@ -120,15 +129,17 @@ close(10)
 ! Perform specified action:
 select case (trim(action))
   case ("acf")
-    call Compute_ACF( np, property, npoints, value, window, print = .true., norm = .false. )
+    call Compute_ACF( np, property, npoints, value, window, norm = .false. )
+  case ("acfn")
+    call Compute_ACF( np, property, npoints, value, window, norm = .true. )
   case ("block")
     call Block_Analysis( np, property, npoints, value )
-  case ("eacf")
-    call Compute_ACF( np, property, npoints, value, window, print = .true., norm = .true. )
-  case ("extract")
-    call Print_Properties( np, property, npoints, value )
-  case ("histogram")
+  case ("histo")
     call Build_Histograms( np, property, npoints, value, nbins )
+  case ("ineff")
+    call Correlation_Analisys( np, property, npoints, value, print = .true. )
+  case ("print")
+    call Print_Properties( np, property, npoints, value )
   case ("stats")
     call Statistics( np, property, npoints, value, print = .true. )
 end select
@@ -138,13 +149,15 @@ contains
   !=================================================================================================
 
   subroutine Usage_Message
-    write(6,'("Usage: post_lammps [options] action [args] file-name property-1 [property-2] ...")')
-    write(6,'("  action = acf or block or extract or histogram or list or stats")')
-    write(6,'("    acf args = window")')
+    write(6,'("Usage: post_lammps [options] action [args] file-name property-1 [property-2 ...]")')
+    write(6,'("  action = acf or acfn or block or histo or ineff or print or props or stats")')
+    write(6,'("    acf   args = window")')
+    write(6,'("    acfn  args = window")')
     write(6,'("    block args = none")')
-    write(6,'("    extract args = none")')
-    write(6,'("    histogram args = nbins")')
-    write(6,'("    list args = none")')
+    write(6,'("    histo args = nbins")')
+    write(6,'("    ineff args = none")')
+    write(6,'("    print args = none")')
+    write(6,'("    props args = none")')
     write(6,'("    stats args = none")')
     stop
   end subroutine Usage_Message
@@ -350,22 +363,22 @@ contains
       end do
       write(6,'()')
     end do
-    stop
   end subroutine Build_Histograms
 
   !=================================================================================================
 
-  subroutine Compute_ACF( np, property, npoints, value, window, print, norm, auto_corr_fun )
+  subroutine Compute_ACF( np, property, npoints, value, window, norm )
     integer,       intent(in)  :: np, npoints, window
     character(sl), intent(in)  :: property(np)
     real(rb),      intent(in)  :: value(np,npoints)
-    logical,       intent(in)  :: print, norm
-    real(rb),      intent(out), optional :: auto_corr_fun(np,0:window)
+    logical,       intent(in)  :: norm
     integer  :: i, j, delta
     real(rb) :: acf(np,0:window), avg(np)
-    if (window > npoints-1) call error( "Window size cannot be larger than", int2str(npoints-1) )
+    logical  :: allpos(np)
+    if (window > npoints-1) call error( "Maximum allowable window size is", int2str(npoints) )
     if (norm) call Statistics( np, property, npoints, value, .false., mean = avg )
     acf = 0.0_rb
+    allpos = .true.
     do delta = 0, window
       do i = 1, npoints-delta
         if (norm) then
@@ -377,22 +390,62 @@ contains
       acf(:,delta) = acf(:,delta)/real(npoints-delta,rb)
     end do
     if (norm) forall(delta=0:window) acf(:,delta) = acf(:,delta)/acf(:,0)
-    if (print) then
-      write(6,'("delta")',advance="no")
+    write(6,'("delta")',advance="no")
+    do i = 1, np
+      write(6,'(2A)',advance="no") sep, "acf<"//trim(property(i))//">"
+    end do
+    write(6,'()')
+    do j = 0, window
+      write(6,'(A)',advance="no") trim(int2str(j))
       do i = 1, np
-        write(6,'(2A)',advance="no") sep, "acf<"//trim(property(i))//">"
-      end do
-      write(6,'()')
-      do j = 0, window
-        write(6,'(A)',advance="no") trim(int2str(j))
-        do i = 1, np
-          write(6,'(2A)',advance="no") sep, trim(real2str(acf(i,j)))
-        end do
-        write(6,'()')
-      end do
-    end if
-    if (present(auto_corr_fun)) auto_corr_fun = acf
+        write(6,'(2A)',advance="no") sep, trim(real2str(acf(i,j)))
+       end do
+       write(6,'()')
+    end do
   end subroutine Compute_ACF
+
+  !=================================================================================================
+
+  subroutine Correlation_Analisys( np, property, npoints, value, print )
+    integer,       intent(in)  :: np, npoints
+    character(sl), intent(in)  :: property(np)
+    real(rb),      intent(in)  :: value(np,npoints)
+    logical,       intent(in)  :: print
+    integer  :: i, delta
+    real(rb) :: acf(np,0:npoints), avg(np), inv_n, g(np), error(np)
+    logical  :: positive(np)
+    call Statistics( np, property, npoints, value, .false., mean = avg )
+    acf = zero
+    positive = .true.
+    delta = -1
+    do while ((delta < npoints).and.any(positive))
+      delta = delta + 1
+      do i = 1, npoints-delta
+        acf(:,delta) = acf(:,delta) + (value(:,i) - avg)*(value(:,i+delta) - avg)
+      end do
+      acf(:,delta) = acf(:,delta)/real(npoints-delta,rb)
+      where (positive) positive = acf(:,delta) > zero
+      where (.not.positive) acf(:,delta) = zero
+    end do
+    forall (i=1:delta) acf(:,i) = acf(:,i)/acf(:,0)
+    g = zero
+    inv_n = one/real(npoints,rb)
+    do i = 1, delta
+      g = g + (one - delta*inv_n)*acf(:,i)
+    end do
+    g = one + two*g
+    error = sqrt(g*acf(:,0)*inv_n)
+    if (print) then
+      do i = 1, np
+        write(6,'(50("-"))')
+        write(6,'("Property............: ",A)') trim(property(i))
+        write(6,'("Stat. inefficency...: ",A)') trim(real2str(g(i)))
+        write(6,'("Average.............: ",A)') trim(real2str(avg(i)))
+        write(6,'("Uncertainty.........: ",A)') trim(real2str(error(i)))
+      end do
+      write(6,'(50("-"))')
+    end if
+  end subroutine Correlation_Analisys
 
   !=================================================================================================
 
