@@ -10,9 +10,9 @@ character(sl)      :: arg(maxnarg)
 
 integer            :: iarg, n
 
-character(5), parameter :: keyword(2) = ["-skip","-sep "]
-integer :: skip
-character :: sep
+character(6), parameter :: keyword(2) = ["-every","-delim"]
+integer :: every
+character :: delim
 
 integer                    :: np, nlines, npoints
 character(sl), allocatable :: property(:)
@@ -25,8 +25,8 @@ logical       :: exist
 character(12) :: C
 
 ! Defaults:
-skip = 0
-sep = ","
+every = 1
+delim = " "
 
 ! Read options:
 iarg = 1
@@ -34,19 +34,19 @@ if (iargc() < 1) call Usage_Message
 call getarg( iarg, line )
 do while (any(keyword == line))
   select case (trim(line))
-    case ("-skip")
+    case ("-every")
       iarg = iarg + 1
       call getarg( iarg, line )
-      skip = str2int( line )
-      if (skip < 0) call error( "Unacceptable value of skip parameter" )
-    case ("-sep")
+      every = str2int( line )
+      if (every < 1) call error( "Unacceptable parameter 'every'" )
+    case ("-delim")
       iarg = iarg + 1
       call getarg( iarg, line )
       select case (trim(line))
-        case ("comma"); sep = ","
-        case ("space"); sep = " "
-        case ("semicolon"); sep = ";"
-        case default; call error( "Unacceptable separator" )
+        case ("comma"); delim = ","
+        case ("space"); delim = " "
+        case ("semicolon"); delim = ";"
+        case default; call error( "Unacceptable delimiter" )
       end select
   end select
   iarg = iarg + 1
@@ -105,7 +105,7 @@ call find_last_run( infile, np, property, indx, first, nlines )
 ! Calculate the actual number of points:
 npoints = 0
 do j = 1, nlines
-  if (mod(j-1,skip+1) == 0) npoints = npoints + 1
+  if (mod(j-1,every) == 0) npoints = npoints + 1
 end do
 allocate( value(np,npoints) )
 
@@ -116,7 +116,7 @@ read(10,'('//C//'/)')
 npoints = 0
 do j = 1, nlines
   read(unit=10,fmt='(A'//csl//')') line
-  if (mod(j-1,skip+1) == 0) then
+  if (mod(j-1,every) == 0) then
     call split( line, narg, arg )
     npoints = npoints + 1
     do i = 1, np
@@ -272,10 +272,10 @@ contains
       end do
     end do
     ! Flush block analysis results:
-    call Block(1) % Flush( 6, separator = sep )
+    call Block(1) % Flush( 6, separator = delim )
     do i = 2, nbloc
       write(6,'("")')
-      call Block(i) % Flush( 6, separator = sep, titles = .false. )
+      call Block(i) % Flush( 6, separator = delim, titles = .false. )
     end do
   end subroutine Block_Analysis
 
@@ -287,7 +287,7 @@ contains
     real(rb),      intent(in) :: value(np,npoints)
     integer :: j
     type(Data_Output) :: Output
-    call Output % Setup( unit = 6, interval = 1, separator = sep )
+    call Output % Setup( unit = 6, interval = 1, separator = delim )
     call Output % Props % Add( property )
     do j = 1, npoints
       call Output % Exec( j, value(:,j) )
@@ -318,9 +318,9 @@ contains
     avg = acc/real(npoints,rb)
     var = acc2/real(npoints,rb) - avg**2
     if (print) then
-      write(6,'("property'//sep//'mininum'//sep//'maximum'//sep//'mean'//sep//'std_dev")')
+      write(6,'("property'//delim//'mininum'//delim//'maximum'//delim//'mean'//delim//'std_dev")')
       do i = 1, np
-        write(6,'(A,4("'//sep//'",A))') trim(property(i)), trim(real2str(vmin(i))), &
+        write(6,'(A,4("'//delim//'",A))') trim(property(i)), trim(real2str(vmin(i))), &
           trim(real2str(vmax(i))), trim(real2str(avg(i))), trim(real2str(sqrt(var(i))))
       end do
     end if
@@ -349,17 +349,17 @@ contains
         histo(i,bin) = histo(i,bin) + 1
       end do
     end do
-    write(6,'(3A)',advance="no") trim(property(1)), sep, "H("//trim(property(1))//")"
+    write(6,'(3A)',advance="no") trim(property(1)), delim, "H("//trim(property(1))//")"
     do i = 2, np
-      write(6,'(4A)',advance="no") sep,trim(property(i)), sep, "H("//trim(property(i))//")"
+      write(6,'(4A)',advance="no") delim,trim(property(i)), delim, "H("//trim(property(i))//")"
     end do
     write(6,'()')
     do bin = 1, nbins
       val = vmin(1) + (bin - 0.5_rb)*delta(1)
-      write(6,'(3A)',advance="no") trim(real2str(val)), sep, trim(int2str(histo(1,bin)))
+      write(6,'(3A)',advance="no") trim(real2str(val)), delim, trim(int2str(histo(1,bin)))
       do i = 2, np
         val = vmin(i) + (bin - 0.5_rb)*delta(i)
-        write(6,'(4A)',advance="no") sep,trim(real2str(val)), sep, trim(int2str(histo(i,bin)))
+        write(6,'(4A)',advance="no") delim,trim(real2str(val)), delim, trim(int2str(histo(i,bin)))
       end do
       write(6,'()')
     end do
@@ -392,13 +392,13 @@ contains
     if (norm) forall(delta=0:window) acf(:,delta) = acf(:,delta)/acf(:,0)
     write(6,'("delta")',advance="no")
     do i = 1, np
-      write(6,'(2A)',advance="no") sep, "acf<"//trim(property(i))//">"
+      write(6,'(2A)',advance="no") delim, "acf<"//trim(property(i))//">"
     end do
     write(6,'()')
     do j = 0, window
       write(6,'(A)',advance="no") trim(int2str(j))
       do i = 1, np
-        write(6,'(2A)',advance="no") sep, trim(real2str(acf(i,j)))
+        write(6,'(2A)',advance="no") delim, trim(real2str(acf(i,j)))
        end do
        write(6,'()')
     end do

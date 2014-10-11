@@ -40,7 +40,7 @@ Actions
 Options
 -------
 
-**-skip n**: Skips n lines after every property reading<br>
-**-sep delimiter**: Specifies the item separator in the output<br>
-  delimiter = space or comma or semicolon<br>
+**-every n**: Skips n lines after every property reading<br>
+**-delim d**: Specifies the item delimiter used for output<br>
+  d = space or comma or semicolon<br>
 
