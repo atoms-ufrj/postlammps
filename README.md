@@ -43,10 +43,10 @@ Options
 -------
 
 **-in**: Specifies the name of the log file to be processed<br>
-**-plain**: Tells postlammps to read a plain data file instead of a lammps log file<br>
-**-every n**: Skips n lines after every property reading<br>
-**-delim d**: Specifies the item delimiter used for output<br>
-  d = space or comma or semicolon or tab<br>
+**-p**: Tells postlammps to read a plain data file instead of a lammps log file<br>
+**-e n**: Skips n lines after every property reading<br>
+**-d delimiter**: Specifies the item delimiter used for output<br>
+  delimiter = space or comma or semicolon or tab<br>
 
 Notes
 -----

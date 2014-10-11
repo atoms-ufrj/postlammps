@@ -25,7 +25,7 @@ character(sl)      :: arg(maxnarg)
 
 integer            :: input, iarg, argcount, n
 
-character(6), parameter :: keyword(4) = [character(6) :: "-every","-delim","-in","-plain"]
+character(3), parameter :: keyword(4) = [character(3) :: "-e","-d","-in","-p"]
 integer :: every
 character :: delim
 
@@ -59,12 +59,12 @@ if (argcount < 1) call Usage_Message
 call get_command_argument( iarg, line )
 do while (any(keyword == line))
   select case (trim(line))
-    case ("-every")
+    case ("-e")
       iarg = iarg + 1
       call get_command_argument( iarg, line )
       every = str2int( line )
       if (every < 1) call error( "Unacceptable parameter 'every'" )
-    case ("-delim")
+    case ("-d")
       iarg = iarg + 1
       call get_command_argument( iarg, line )
       select case (trim(line))
@@ -79,7 +79,7 @@ do while (any(keyword == line))
       call get_command_argument( iarg, infile )
       inquire( file = infile, exist = read_from_file )
       if (.not.read_from_file) call error( "Specified input file ", infile, "does not exist" )
-    case ("-plain")
+    case ("-p")
       plain = .true.
   end select
   iarg = iarg + 1

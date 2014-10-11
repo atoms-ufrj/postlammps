@@ -284,7 +284,7 @@ contains
     real(rb),         intent(in)    :: Data(a%Props%Total)
     integer :: i
     character(sl) :: C
-    write(C,*) Data(i)
+    write(C,*) Data(1)
     do i = 2, a%Props%Total
       write(a%unit,'(A,A)',advance="no") trim(C), a%Props%separator
       write(C,*) Data(i)
