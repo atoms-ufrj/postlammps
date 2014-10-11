@@ -1,5 +1,5 @@
-post_lammps
-===========
+Postlammps
+==========
 
 A tool for performing post-processing with lammps log files.
 
@@ -14,7 +14,7 @@ sudo make install<br>
 Usage
 -----
 
-Usage: post_lammps [options] action [args] file-name property-1 [property-2 ...]<br>
+Usage: postlammps [options] action [args] file-name property-1 [property-2 ...]<br>
   action = acf or acfn or block or histo or ineff or print or props or stats<br>
     acf   args = maxtime<br>
     acfn  args = maxtime<br>

@@ -1,17 +1,17 @@
 FORT    = gfortran
 FOPTS   = -O3 -march=native -ffast-math -funroll-loops -fstrict-aliasing -cpp -Wunused
 
-all: post_lammps
+all: postlammps
 
 clean:
 	rm -rf *.o
 	rm -rf *.mod
-	rm -rf post_lammps
+	rm -rf postlammps
 
 install:
-	cp -f ./post_lammps /usr/local/bin/
+	cp -f ./postlammps /usr/local/bin/
 
-post_lammps: post_lammps.f90 mData_Proc.o mProp_List.o mProp_List.o mString.o
+postlammps: postlammps.f90 mData_Proc.o mProp_List.o mProp_List.o mString.o
 	$(FORT) $(FOPTS) -o $@ $^
 
 mData_Proc.o: mData_Proc.f90 mProp_List.o
