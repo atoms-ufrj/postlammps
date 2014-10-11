@@ -25,7 +25,7 @@ character(sl)      :: arg(maxnarg)
 
 integer            :: input, iarg, argcount, n
 
-character(6), parameter :: keyword(3) = ["-every","-delim","-in   "]
+character(6), parameter :: keyword(4) = [character(6) :: "-every","-delim","-in","-plain"]
 integer :: every
 character :: delim
 
@@ -34,8 +34,9 @@ character(sl), allocatable :: property(:)
 integer,       allocatable :: indx(:)
 real(rb),      allocatable :: value(:,:)
 
-integer       :: i, j, ioerr, first, nbins, window
+integer       :: i, j, nbins, window
 character(sl) :: infile, action, line
+logical       :: read_from_file, props, plain
 
 type tLine
   character(sl) :: line = ""
@@ -46,6 +47,7 @@ type(tLine), pointer :: titles => null()
 type(tLine), pointer :: current => null()
 
 ! Defaults:
+plain = .false.
 input = 5
 every = 1
 delim = " "
@@ -69,13 +71,16 @@ do while (any(keyword == line))
         case ("comma"); delim = ","
         case ("space"); delim = " "
         case ("semicolon"); delim = ";"
+        case ("tab"); delim = achar(9)
         case default; call error( "Unacceptable delimiter" )
       end select
     case ("-in")
       iarg = iarg + 1
       call get_command_argument( iarg, infile )
-      open( newunit = input, file = infile, status = "old", iostat = ioerr )
-      if (ioerr /= 0) call error( "Specified input file ", infile, "does not exist" )
+      inquire( file = infile, exist = read_from_file )
+      if (.not.read_from_file) call error( "Specified input file ", infile, "does not exist" )
+    case ("-plain")
+      plain = .true.
   end select
   iarg = iarg + 1
   call get_command_argument( iarg, line )
@@ -90,6 +95,7 @@ select case (trim(action))
   case ("block","ineff","print","props","stats"); n = 0
   case default; call error( "Unrecognized action", action )
 end select
+props = trim(action) == "props"
 
 ! Read action arguments:
 if (argcount < iarg + n) call Usage_Message
@@ -106,23 +112,27 @@ select case (trim(action))
     if (nbins <= 0) call error( "Unacceptable number of bins" )
 end select
 
-! Perform listing action, if specified:
-if (trim(action) == "props") then
-  call List_Properties( input )
-  stop
-end if
-
 ! Read property names:
 np = argcount - iarg
-if (np == 0) call error( "No properties specified." )
+if ((np == 0).and.(.not.props)) call error( "no properties have been specified")
 allocate( property(np), indx(np) )
 do i = 1, np
   call get_command_argument( iarg + i, property(i) )
 end do
 
-! Search for the last run containing the specified properties:
-call find_last_run( input, np, property, indx, first, nlines )
-if (input /= 5) close( input )
+! Read data from the standard input or the specified input file:
+if (read_from_file) open( newunit = input, file = infile, status = "old" )
+if (plain) then
+  call read_plain_file( input, np, property, indx, nlines, props )
+else
+  call read_lammps_log( input, np, property, indx, nlines, props )
+end if
+if (read_from_file) close( input )
+if (props) then
+  write(6,'("Properties: ",A)') trim(titles % line)
+  write(6,'("Number of points: ",A)') trim(int2str(nlines))
+  stop
+end if
 
 ! Calculate the actual number of points:
 npoints = 0
@@ -183,49 +193,52 @@ contains
 
   !=================================================================================================
 
-  subroutine List_Properties( unit )
-    integer, intent(in) :: unit
-    integer :: iline, ierr, last
-    character(sl) :: line, titles
-    logical :: titles_found
-    iline = 0
-    first = 0
-    last = 0
-    titles_found = .false.
-    do while (ierr == 0)
-      iline = iline + 1
-      read(unit,'(A'//csl//')',iostat=ierr) line
-      if (titles_found) then
-        titles = line
-        first = iline + 1
-        titles_found = .false.
-      end if
-      select case (line(1:12))
-        case ("Memory usage")
-          titles_found = .true.
-        case ("Loop time of")
-          last = iline - 1
-      end select
-    end do
-    if (last > first) then
-      write(6,'("Properties: ",A)') trim(titles)
-      write(6,'("Number of points: ",A)') trim(int2str(last - first + 1))
-    else
-      call error( "could not find a complete last run" )
-    end if
-  end subroutine List_Properties
-
-  !=================================================================================================
-  !> Search for the last run output in a lammps log file and returns the index of the first line
-  !! of property svals and the total number of lines of property svals.
-
-  subroutine find_last_run( file, np, property, indx, first, nlines )
+  subroutine read_plain_file( file, np, property, indx, nlines, props )
     integer,      intent(in)  :: file
     integer,      intent(in)  :: np
     character(*), intent(in)  :: property(np)
     integer,      intent(out) :: indx(np)
-    integer,      intent(out) :: first, nlines
-    integer :: iline, ierr, narg, i, j, last
+    integer,      intent(out) :: nlines
+    logical,      intent(in)  :: props
+    integer :: ierr, narg, i, j
+    character(sl) :: line, arg(maxnarg)
+    logical :: titles_found
+    allocate( titles )
+    read(input,'(A'//csl//')') titles % line
+    call split( titles % line, narg, arg )
+    indx = 0
+    do i = 1, np
+      do j = 1, narg
+        if (arg(j) == property(i)) indx(i) = j
+      end do
+    end do
+    titles_found = all(indx > 0).or.props
+    if (titles_found) then
+      current => titles
+      read(input,'(A'//csl//')',iostat=ierr) line
+      nlines = 0
+      do while (ierr == 0)
+        nlines = nlines + 1
+        allocate( current % next )
+        current => current % next
+        current % line = line
+        read(input,'(A'//csl//')',iostat=ierr) line
+      end do
+    else
+      call error( "could not find the specified properties" )
+    end if
+  end subroutine read_plain_file
+
+  !=================================================================================================
+
+  subroutine read_lammps_log( file, np, property, indx, nlines, props )
+    integer,      intent(in)  :: file
+    integer,      intent(in)  :: np
+    character(*), intent(in)  :: property(np)
+    integer,      intent(out) :: indx(np)
+    integer,      intent(out) :: nlines
+    logical,      intent(in)  :: props
+    integer :: iline, ierr, narg, i, j, first, last
     character(sl) :: line, arg(maxnarg)
     logical :: titles_found, run_found
     iline = 0
@@ -233,9 +246,10 @@ contains
     last = 0
     titles_found = .false.
     run_found = .false.
+    ierr = 0
     do while (ierr == 0)
       iline = iline + 1
-      read(unit=input,fmt='(A'//csl//')',iostat=ierr) line
+      read(input,'(A'//csl//')',iostat=ierr) line
       if (ierr == 0) then
         if (associated(current)) then
           allocate( current % next )
@@ -254,7 +268,7 @@ contains
               if (arg(j) == property(i)) indx(i) = j
             end do
           end do
-          run_found = all(indx > 0)
+          run_found = all(indx > 0).or.props
           if (run_found) first = iline + 1
           titles_found = .false.
         end if
@@ -272,7 +286,7 @@ contains
     if (last <= first) &
       call error( "could not find a complete last run with specified properties" )
     nlines = last - first + 1
-  end subroutine find_last_run
+  end subroutine read_lammps_log
 
   !=================================================================================================
 

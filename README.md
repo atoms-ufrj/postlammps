@@ -7,6 +7,8 @@ A tool for performing post-processing with lammps log files.
 Installation
 ------------
 
+git clone https://github.com/atoms-ufrj/postlammps<br>
+cd postlammps<br>
 make<br>
 sudo make install<br>
 
@@ -41,12 +43,14 @@ Options
 -------
 
 **-in**: Specifies the name of the log file to be processed<br>
+**-plain**: Tells postlammps to read a plain data file instead of a lammps log file<br>
 **-every n**: Skips n lines after every property reading<br>
 **-delim d**: Specifies the item delimiter used for output<br>
-  d = space or comma or semicolon<br>
+  d = space or comma or semicolon or tab<br>
 
 Notes
 -----
 
-If option **-in** is not used, postlammps operates in the standard input.
-
+If option **-in** is not used, postlammps operates in the standard input.<br>
+<br>
+A plain data file contains the property titles in the first line and the property values in the subsequent lines.<br>

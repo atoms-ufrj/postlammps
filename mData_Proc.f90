@@ -275,7 +275,7 @@ contains
 !===================================================================================================
   subroutine Data_Output_Init( a )
     class(Data_Output), intent(inout) :: a
-    write(a%unit,'(A)') "Step"//a%props%separator//trim( a%Props%Titles() )
+    write(a%unit,'(A)') trim( a%Props%Titles() )
   end subroutine Data_Output_Init
   !-------------------------------------------------------------------------------------------------
   subroutine Data_Output_Act( a, Step, Data )
