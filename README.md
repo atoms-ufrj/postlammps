@@ -14,7 +14,7 @@ sudo make install<br>
 Usage
 -----
 
-Usage: postlammps [options] action [args] file-name property-1 [property-2 ...]<br>
+Usage: postlammps [options] action [args] property-1 [property-2 ...]<br>
   action = acf or acfn or block or histo or ineff or print or props or stats<br>
     acf   args = maxtime<br>
     acfn  args = maxtime<br>
@@ -40,7 +40,13 @@ Actions
 Options
 -------
 
+**-in**: Specifies the name of the log file to be processed<br>
 **-every n**: Skips n lines after every property reading<br>
 **-delim d**: Specifies the item delimiter used for output<br>
   d = space or comma or semicolon<br>
+
+Notes
+-----
+
+If option **-in** is not used, postlammps operates in the standard input.
 

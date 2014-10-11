@@ -1,19 +1,19 @@
 program postlammps
 
-!   This file is part of Foobar.
-
-!    Foobar is free software: you can redistribute it and/or modify
+!   This file is part of Postlammps.
+!
+!    Postlammps is free software: you can redistribute it and/or modify
 !    it under the terms of the GNU General Public License as published by
 !    the Free Software Foundation, either version 3 of the License, or
 !    (at your option) any later version.
-
-!    Foobar is distributed in the hope that it will be useful,
+!
+!    Postlammps is distributed in the hope that it will be useful,
 !    but WITHOUT ANY WARRANTY; without even the implied warranty of
 !    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !    GNU General Public License for more details.
-
+!
 !    You should have received a copy of the GNU General Public License
-!    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+!    along with Postlammps.  If not, see <http://www.gnu.org/licenses/>.
 
 use mData_Proc
 use mString
@@ -23,9 +23,9 @@ integer, parameter :: maxnarg = 15
 integer            :: narg
 character(sl)      :: arg(maxnarg)
 
-integer            :: iarg, n
+integer            :: input, iarg, argcount, n
 
-character(6), parameter :: keyword(2) = ["-every","-delim"]
+character(6), parameter :: keyword(3) = ["-every","-delim","-in   "]
 integer :: every
 character :: delim
 
@@ -34,42 +34,55 @@ character(sl), allocatable :: property(:)
 integer,       allocatable :: indx(:)
 real(rb),      allocatable :: value(:,:)
 
-integer       :: i, j, first, nbins, window
+integer       :: i, j, ioerr, first, nbins, window
 character(sl) :: infile, action, line
-logical       :: exist
-character(12) :: C
+
+type tLine
+  character(sl) :: line = ""
+  type(tLine), pointer :: next => null()
+end type tLine
+type(tLine), pointer :: StdIn => null()
+type(tLine), pointer :: titles => null()
+type(tLine), pointer :: current => null()
 
 ! Defaults:
+input = 5
 every = 1
 delim = " "
 
 ! Read options:
+argcount = command_argument_count()
 iarg = 1
-if (iargc() < 1) call Usage_Message
-call getarg( iarg, line )
+if (argcount < 1) call Usage_Message
+call get_command_argument( iarg, line )
 do while (any(keyword == line))
   select case (trim(line))
     case ("-every")
       iarg = iarg + 1
-      call getarg( iarg, line )
+      call get_command_argument( iarg, line )
       every = str2int( line )
       if (every < 1) call error( "Unacceptable parameter 'every'" )
     case ("-delim")
       iarg = iarg + 1
-      call getarg( iarg, line )
+      call get_command_argument( iarg, line )
       select case (trim(line))
         case ("comma"); delim = ","
         case ("space"); delim = " "
         case ("semicolon"); delim = ";"
         case default; call error( "Unacceptable delimiter" )
       end select
+    case ("-in")
+      iarg = iarg + 1
+      call get_command_argument( iarg, infile )
+      open( newunit = input, file = infile, status = "old", iostat = ioerr )
+      if (ioerr /= 0) call error( "Specified input file ", infile, "does not exist" )
   end select
   iarg = iarg + 1
-  call getarg( iarg, line )
+  call get_command_argument( iarg, line )
 end do
 
 ! First argument is the specified action:
-call getarg( iarg, action )
+call get_command_argument( iarg, action )
 
 ! Check specified action:
 select case (trim(action))
@@ -79,43 +92,37 @@ select case (trim(action))
 end select
 
 ! Read action arguments:
-if (iargc() < iarg + n) call Usage_Message
+if (argcount < iarg + n) call Usage_Message
 select case (trim(action))
   case ("acf","acfn")
     iarg = iarg + 1
-    call getarg( iarg, line )
+    call get_command_argument( iarg, line )
     window = str2int( line )
     if (window <= 0) call error( "Unacceptable maximum window size" )
   case ("histo")
     iarg = iarg + 1
-    call getarg( iarg, line )
+    call get_command_argument( iarg, line )
     nbins = str2int( line )
     if (nbins <= 0) call error( "Unacceptable number of bins" )
 end select
 
-! Read file name:
-iarg = iarg + 1
-if (iargc() < iarg) call Usage_Message
-call getarg( iarg, infile )
-inquire( file = infile, exist = exist )
-if (.not.exist) call error( "specified file <", infile, "> does not exist." )
-
 ! Perform listing action, if specified:
 if (trim(action) == "props") then
-  call List_Properties( infile )
+  call List_Properties( input )
   stop
 end if
 
 ! Read property names:
-np = iargc() - iarg
+np = argcount - iarg
 if (np == 0) call error( "No properties specified." )
 allocate( property(np), indx(np) )
 do i = 1, np
-  call getarg( iarg + i, property(i) )
+  call get_command_argument( iarg + i, property(i) )
 end do
 
 ! Search for the last run containing the specified properties:
-call find_last_run( infile, np, property, indx, first, nlines )
+call find_last_run( input, np, property, indx, first, nlines )
+if (input /= 5) close( input )
 
 ! Calculate the actual number of points:
 npoints = 0
@@ -124,22 +131,19 @@ do j = 1, nlines
 end do
 allocate( value(np,npoints) )
 
-! Read property values from the log file:
-open( unit = 10, file = infile, status = "old" )
-write(C,*) first-2
-read(10,'('//C//'/)')
+! Read property values:
+current => titles
 npoints = 0
 do j = 1, nlines
-  read(unit=10,fmt='(A'//csl//')') line
+  current => current % next
   if (mod(j-1,every) == 0) then
-    call split( line, narg, arg )
+    call split( current % line, narg, arg )
     npoints = npoints + 1
     do i = 1, np
       read(arg(indx(i)),*) value(i,npoints)
     end do
   end if
 end do
-close(10)
 
 ! Perform specified action:
 select case (trim(action))
@@ -164,7 +168,7 @@ contains
   !=================================================================================================
 
   subroutine Usage_Message
-    write(6,'("Usage: post_lammps [options] action [args] file-name property-1 [property-2 ...]")')
+    write(6,'("Usage: postlammps [options] action [args] property-1 [property-2 ...]")')
     write(6,'("  action = acf or acfn or block or histo or ineff or print or props or stats")')
     write(6,'("    acf   args = window")')
     write(6,'("    acfn  args = window")')
@@ -179,20 +183,18 @@ contains
 
   !=================================================================================================
 
-  subroutine List_Properties( file )
-    character(*), intent(in)  :: file
+  subroutine List_Properties( unit )
+    integer, intent(in) :: unit
     integer :: iline, ierr, last
     character(sl) :: line, titles
     logical :: titles_found
-    open( unit = 10, file = file, status = "old", iostat = ierr )
-    if (ierr /= 0) call error( "could not open file", file )
     iline = 0
     first = 0
     last = 0
     titles_found = .false.
     do while (ierr == 0)
       iline = iline + 1
-      read(unit=10,fmt='(A'//csl//')',iostat=ierr) line
+      read(unit,'(A'//csl//')',iostat=ierr) line
       if (titles_found) then
         titles = line
         first = iline + 1
@@ -205,12 +207,11 @@ contains
           last = iline - 1
       end select
     end do
-    close(10)
     if (last > first) then
       write(6,'("Properties: ",A)') trim(titles)
       write(6,'("Number of points: ",A)') trim(int2str(last - first + 1))
     else
-      call error( "could not find a complete last run in file", file )
+      call error( "could not find a complete last run" )
     end if
   end subroutine List_Properties
 
@@ -219,7 +220,7 @@ contains
   !! of property svals and the total number of lines of property svals.
 
   subroutine find_last_run( file, np, property, indx, first, nlines )
-    character(*), intent(in)  :: file
+    integer,      intent(in)  :: file
     integer,      intent(in)  :: np
     character(*), intent(in)  :: property(np)
     integer,      intent(out) :: indx(np)
@@ -227,8 +228,6 @@ contains
     integer :: iline, ierr, narg, i, j, last
     character(sl) :: line, arg(maxnarg)
     logical :: titles_found, run_found
-    open( unit = 10, file = file, status = "old", iostat = ierr )
-    if (ierr /= 0) call error( "could not open file", file )
     iline = 0
     first = 0
     last = 0
@@ -236,32 +235,42 @@ contains
     run_found = .false.
     do while (ierr == 0)
       iline = iline + 1
-      read(unit=10,fmt='(A'//csl//')',iostat=ierr) line
-      if (titles_found) then
-        call split( line, narg, arg )
-        indx = 0
-        do i = 1, np
-          do j = 1, narg
-            if (arg(j) == property(i)) indx(i) = j
+      read(unit=input,fmt='(A'//csl//')',iostat=ierr) line
+      if (ierr == 0) then
+        if (associated(current)) then
+          allocate( current % next )
+          current => current % next
+        else
+          allocate( current )
+          StdIn => current
+        end if
+        current % line = line
+        if (titles_found) then
+          titles => current
+          call split( line, narg, arg )
+          indx = 0
+          do i = 1, np
+            do j = 1, narg
+              if (arg(j) == property(i)) indx(i) = j
+            end do
           end do
-        end do
-        run_found = all(indx > 0)
-        if (run_found) first = iline + 1
-        titles_found = .false.
+          run_found = all(indx > 0)
+          if (run_found) first = iline + 1
+          titles_found = .false.
+        end if
+        select case (line(1:12))
+          case ("Memory usage")
+            titles_found = .true.
+          case ("Loop time of")
+            if (run_found) then
+              last = iline - 1
+              run_found = .false.
+            end if
+        end select
       end if
-      select case (line(1:12))
-        case ("Memory usage")
-          titles_found = .true.
-        case ("Loop time of")
-          if (run_found) then
-            last = iline - 1
-            run_found = .false.
-          end if
-      end select
     end do
-    close(10)
     if (last <= first) &
-      call error( "could not find a complete last run with specified properties in file", file )
+      call error( "could not find a complete last run with specified properties" )
     nlines = last - first + 1
   end subroutine find_last_run
 
