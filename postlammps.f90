@@ -91,8 +91,8 @@ call get_command_argument( iarg, action )
 
 ! Check specified action:
 select case (trim(action))
-  case ("acf","acfn","histo"); n = 1
-  case ("block","ineff","print","props","stats"); n = 0
+  case ("acfun","fluct","histo"); n = 1
+  case ("block","ineff","print","props","sampl","stats"); n = 0
   case default; call error( "Unrecognized action", action )
 end select
 props = trim(action) == "props"
@@ -100,7 +100,7 @@ props = trim(action) == "props"
 ! Read action arguments:
 if (argcount < iarg + n) call Usage_Message
 select case (trim(action))
-  case ("acf","acfn")
+  case ("acfun","fluct")
     iarg = iarg + 1
     call get_command_argument( iarg, line )
     window = str2int( line )
@@ -157,18 +157,20 @@ end do
 
 ! Perform specified action:
 select case (trim(action))
-  case ("acf")
+  case ("acfun")
     call Compute_ACF( np, property, npoints, value, window, norm = .false. )
-  case ("acfn")
-    call Compute_ACF( np, property, npoints, value, window, norm = .true. )
   case ("block")
     call Block_Analysis( np, property, npoints, value )
+  case ("fluct")
+    call Compute_ACF( np, property, npoints, value, window, norm = .true. )
   case ("histo")
     call Build_Histograms( np, property, npoints, value, nbins )
   case ("ineff")
     call Correlation_Analisys( np, property, npoints, value, print = .true. )
   case ("print")
     call Print_Properties( np, property, npoints, value )
+  case ("sampl")
+    call Subsample( np, property, npoints, value )
   case ("stats")
     call Statistics( np, property, npoints, value, print = .true. )
 end select
@@ -179,14 +181,15 @@ contains
 
   subroutine Usage_Message
     write(6,'("Usage: postlammps [options] action [args] property-1 [property-2 ...]")')
-    write(6,'("  action = acf or acfn or block or histo or ineff or print or props or stats")')
-    write(6,'("    acf   args = window")')
-    write(6,'("    acfn  args = window")')
+    write(6,'("  action = acfun or block or fluct or histo or ineff or print or props or sampl or stats")')
+    write(6,'("    acfun args = window")')
     write(6,'("    block args = none")')
+    write(6,'("    fluct args = window")')
     write(6,'("    histo args = nbins")')
     write(6,'("    ineff args = none")')
     write(6,'("    print args = none")')
     write(6,'("    props args = none")')
+    write(6,'("    sampl args = none")')
     write(6,'("    stats args = none")')
     stop
   end subroutine Usage_Message
@@ -319,13 +322,18 @@ contains
 
   !=================================================================================================
 
-  subroutine Print_Properties( np, property, npoints, value )
+  subroutine Print_Properties( np, property, npoints, value, interval )
     integer,       intent(in) :: np, npoints
     character(sl), intent(in) :: property(np)
     real(rb),      intent(in) :: value(np,npoints)
+    integer,       intent(in), optional :: interval
     integer :: j
     type(Data_Output) :: Output
-    call Output % Setup( unit = 6, interval = 1, separator = delim )
+    if (present(interval)) then
+      call Output % Setup( unit = 6, interval = interval, separator = delim )
+    else
+      call Output % Setup( unit = 6, interval = 1, separator = delim )
+    end if
     call Output % Props % Add( property )
     do j = 1, npoints
       call Output % Exec( j, value(:,j) )
@@ -444,11 +452,12 @@ contains
 
   !=================================================================================================
 
-  subroutine Correlation_Analisys( np, property, npoints, value, print )
+  subroutine Correlation_Analisys( np, property, npoints, value, print, stat_ineff )
     integer,       intent(in)  :: np, npoints
     character(sl), intent(in)  :: property(np)
     real(rb),      intent(in)  :: value(np,npoints)
     logical,       intent(in)  :: print
+    real(rb),      intent(out), optional  :: stat_ineff(np)
     integer  :: i, delta
     real(rb) :: acf(np,0:npoints), avg(np), inv_n, g(np), error(np)
     logical  :: positive(np)
@@ -483,7 +492,19 @@ contains
       end do
       write(6,'(50("-"))')
     end if
+    if (present(stat_ineff)) stat_ineff = g
   end subroutine Correlation_Analisys
+
+  !=================================================================================================
+
+  subroutine Subsample( np, property, npoints, value )
+    integer,       intent(in)  :: np, npoints
+    character(sl), intent(in)  :: property(np)
+    real(rb),      intent(in)  :: value(np,npoints)
+    real(rb) :: g(np)
+    call Correlation_Analisys( np, property, npoints, value, .false., g )
+    call Print_Properties( np, property, npoints, value, ceiling(maxval(g)) )
+  end subroutine Subsample
 
   !=================================================================================================
 

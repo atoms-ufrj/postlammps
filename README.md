@@ -17,26 +17,28 @@ Usage
 -----
 
 Usage: postlammps [options] action [args] property-1 [property-2 ...]<br>
-  action = acf or acfn or block or histo or ineff or print or props or stats<br>
-    acf   args = maxtime<br>
-    acfn  args = maxtime<br>
-    block args = none<br>
-    histo args = nbins<br>
-    ineff args = none<br>
-    print args = none<br>
-    props args = none<br>
-    stats args = none<br>
+  * action = acfun or block or fluct or histo or ineff or print or props or sampl or stats<br>
+    * acfun args = maxtime<br>
+    * block args = none<br>
+    * fluct args = maxtime<br>
+    * histo args = nbins<br>
+    * ineff args = none<br>
+    * print args = none<br>
+    * props args = none<br>
+    * sampl args = none<br>
+    * stats args = none<br>
 
 Actions
 -------
 
-**acf**: Computes autocorrelation functions from zero to maxtime<br>
-**acfn**: Computes normalized fluctuation autocorrelation functions from zero to maxtime<br>
+**acfun**: Computes autocorrelation functions from zero to maxtime<br>
 **block**: Performs normalization group blocking analysis<br>
+**fluct**: Computes normalized fluctuation autocorrelation functions from zero to maxtime<br>
 **histo**: Builds histograms with specified number of bins<br>
 **ineff**: Computes statistical inefficiencies and uncertainties<br>
 **print**: Prints the values of the selected properties<br>
 **props**: Lists all properties available in the log file<br>
+**sampl**: Samples uncorrelated points from the original data<br>
 **stats**: Computes basic statistics<br>
 
 Options
@@ -51,6 +53,6 @@ Options
 Notes
 -----
 
-If option **-in** is not used, postlammps operates in the standard input.<br>
-<br>
-A plain data file contains the property titles in the first line and the property values in the subsequent lines.<br>
+* If option **-in** is not used, postlammps operates in the standard input.<br>
+* A plain data file contains the property titles in the first line and the property values in the subsequent lines.<br>
+
