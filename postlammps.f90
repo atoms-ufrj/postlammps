@@ -25,7 +25,7 @@ character(sl)      :: arg(maxnarg)
 
 integer            :: input, iarg, argcount, n
 
-character(3), parameter :: keyword(4) = [character(3) :: "-e","-d","-in","-p"]
+character(3), parameter :: keyword(5) = [character(3) :: "-e","-d","-in","-p","-nt"]
 integer :: every
 character :: delim
 
@@ -36,7 +36,7 @@ real(rb),      allocatable :: value(:,:)
 
 integer       :: i, j, nbins, window
 character(sl) :: infile, action, line
-logical       :: read_from_file, props, plain
+logical       :: read_from_file, props, plain, print_titles
 
 type tLine
   character(sl) :: line = ""
@@ -51,6 +51,7 @@ plain = .false.
 input = 5
 every = 1
 delim = " "
+print_titles = .true.
 
 ! Read options:
 argcount = command_argument_count()
@@ -81,6 +82,8 @@ do while (any(keyword == line))
       if (.not.read_from_file) call error( "Specified input file ", infile, "does not exist" )
     case ("-p")
       plain = .true.
+    case ("-nt")
+      print_titles = .false.
   end select
   iarg = iarg + 1
   call get_command_argument( iarg, line )
@@ -328,15 +331,9 @@ contains
     real(rb),      intent(in) :: value(np,npoints)
     integer,       intent(in), optional :: interval
     integer :: j
-    type(Data_Output) :: Output
-    if (present(interval)) then
-      call Output % Setup( unit = 6, interval = interval, separator = delim )
-    else
-      call Output % Setup( unit = 6, interval = 1, separator = delim )
-    end if
-    call Output % Props % Add( property )
+    if (print_titles) call write_str( 6, property, delim )
     do j = 1, npoints
-      call Output % Exec( j, value(:,j) )
+      call write_str(6, real2str(value(:,j)), delim )
     end do
   end subroutine Print_Properties
 
@@ -364,7 +361,7 @@ contains
     avg = acc/real(npoints,rb)
     var = acc2/real(npoints,rb) - avg**2
     if (print) then
-      write(6,'("property'//delim//'mininum'//delim//'maximum'//delim//'mean'//delim//'std_dev")')
+      if (print_titles) call write_str( 6, ["property","minimum ","maximum ","mean    ","std_dev "], delim )
       do i = 1, np
         write(6,'(A,4("'//delim//'",A))') trim(property(i)), trim(real2str(vmin(i))), &
           trim(real2str(vmax(i))), trim(real2str(avg(i))), trim(real2str(sqrt(var(i))))
@@ -483,14 +480,13 @@ contains
     g = one + two*g
     error = sqrt(g*acf(:,0)*inv_n)
     if (print) then
+      if (print_titles) call write_str( 6, ["property   ","average    ","uncertainty","stat_ineff "], delim )
       do i = 1, np
-        write(6,'(50("-"))')
-        write(6,'("Property............: ",A)') trim(property(i))
-        write(6,'("Stat. inefficency...: ",A)') trim(real2str(g(i)))
-        write(6,'("Average.............: ",A)') trim(real2str(avg(i)))
-        write(6,'("Uncertainty.........: ",A)') trim(real2str(error(i)))
+        write(6,'(A,3("'//delim//'",A))') trim(property(i)),        &
+                                          trim(real2str(avg(i))),   &
+                                          trim(real2str(error(i))), &
+                                          trim(real2str(g(i)))
       end do
-      write(6,'(50("-"))')
     end if
     if (present(stat_ineff)) stat_ineff = g
   end subroutine Correlation_Analisys

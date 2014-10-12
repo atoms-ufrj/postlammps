@@ -49,6 +49,7 @@ Options
 **-e n**: Skips n lines after every property reading<br>
 **-d delimiter**: Specifies the item delimiter used for output<br>
   delimiter = space or comma or semicolon or tab<br>
+**-nt**: Does not print property titles<br>
 
 Notes
 -----

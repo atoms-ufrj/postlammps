@@ -101,20 +101,23 @@ contains
 
   !=================================================================================================
 
-  function join( narg, arg ) result( str )
-    integer,      intent(in)  :: narg
-    character(*), intent(in)  :: arg(:)
-    character(sl)             :: str
-    integer :: i
+  subroutine write_str( unit, arg, delim )
+    integer,      intent(in) :: unit
+    character(*), intent(in) :: arg(:)
+    character,    intent(in) :: delim
+    character(1000) :: str
+    integer :: i, narg
+    narg = size(arg)
     if (narg == 0) then
       str = ""
     else
       str = arg(1)
       do i = 2, narg
-        str = trim(str)//" "//arg(i)
+        str = trim(str)//delim//arg(i)
       end do
     end if
-  end function join
+    write(unit,'(A)') trim(str)
+  end subroutine write_str
 
   !=================================================================================================
 
@@ -159,7 +162,7 @@ contains
 
   !=================================================================================================
 
-  function int2str( i ) result( str )
+  elemental function int2str( i ) result( str )
     integer, intent(in) :: i
     character(sl)       :: str
     integer :: ioerr
@@ -169,7 +172,7 @@ contains
 
   !=================================================================================================
 
-  function real2str( r ) result( str )
+  elemental function real2str( r ) result( str )
     real(rb), intent(in) :: r
     character(sl)        :: str
     integer :: ioerr
