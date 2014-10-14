@@ -52,6 +52,7 @@ input = 5
 every = 1
 delim = " "
 print_titles = .true.
+read_from_file = .false.
 
 ! Read options:
 argcount = command_argument_count()
