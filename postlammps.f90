@@ -25,7 +25,7 @@ character(sl)      :: arg(maxnarg)
 
 integer            :: input, iarg, argcount, n
 
-character(3), parameter :: keyword(5) = [character(3) :: "-e","-d","-in","-p","-nt"]
+character(3), parameter :: keyword(6) = [character(3) :: "-e","-d","-in","-c","-p","-nt"]
 integer :: every
 character :: delim
 
@@ -34,9 +34,10 @@ character(sl), allocatable :: property(:)
 integer,       allocatable :: indx(:)
 real(rb),      allocatable :: value(:,:)
 
-integer       :: i, j, nbins, window
+integer       :: i, j, nbins, window, initial
 character(sl) :: infile, action, line
 logical       :: read_from_file, props, plain, print_titles
+real(rb)      :: percentage
 
 type tLine
   character(sl) :: line = ""
@@ -53,6 +54,7 @@ every = 1
 delim = " "
 print_titles = .true.
 read_from_file = .false.
+percentage = 100.0_rb
 
 ! Read options:
 argcount = command_argument_count()
@@ -81,6 +83,11 @@ do while (any(keyword == line))
       call get_command_argument( iarg, infile )
       inquire( file = infile, exist = read_from_file )
       if (.not.read_from_file) call error( "Specified input file ", infile, "does not exist" )
+    case ("-c")
+      iarg = iarg + 1
+      call get_command_argument( iarg, line )
+      percentage = str2real(line)
+      if ((percentage <= 0.0_rb).or.(percentage > 100.0_rb)) call error( "wrong -c option definition" )
     case ("-p")
       plain = .true.
     case ("-nt")
@@ -140,7 +147,8 @@ end if
 
 ! Calculate the actual number of points:
 npoints = 0
-do j = 1, nlines
+initial = int((1.0_rb - 0.01_rb*percentage)*nlines) + 1
+do j = initial, nlines
   if (mod(j-1,every) == 0) npoints = npoints + 1
 end do
 allocate( value(np,npoints) )
@@ -148,7 +156,10 @@ allocate( value(np,npoints) )
 ! Read property values:
 current => titles
 npoints = 0
-do j = 1, nlines
+do j = 1, initial-1
+  current => current % next
+end do
+do j = initial, nlines
   current => current % next
   if (mod(j-1,every) == 0) then
     call split( current % line, narg, arg )
