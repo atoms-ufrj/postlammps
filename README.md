@@ -51,6 +51,7 @@ Options
   delimiter = space or comma or semicolon or tab<br>
 **-nt**: Does not print property titles<br>
 **-c X**: Consider only the last X% of data<br>
+**-r X Y**: Consider only data within a specified range<br>
 
 Notes
 -----
