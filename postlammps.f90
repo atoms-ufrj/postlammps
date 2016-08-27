@@ -386,10 +386,10 @@ contains
     avg = acc/real(npoints,rb)
     var = acc2/real(npoints,rb) - avg**2
     if (print) then
-      if (print_titles) call write_str( 6, ["property","minimum ","maximum ","mean    ","std_dev "], delim )
+      if (print_titles) call write_str( 6, ["property","mean    ","std_dev ","minimum ","maximum "], delim )
       do i = 1, np
-        write(6,'(A,4("'//delim//'",A))') trim(property(i)), trim(real2str(vmin(i))), &
-          trim(real2str(vmax(i))), trim(real2str(avg(i))), trim(real2str(sqrt(var(i))))
+        write(6,'(A,4("'//delim//'",A))') trim(property(i)), trim(real2str(avg(i))), &
+          trim(real2str(sqrt(var(i)))), trim(real2str(vmin(i))), trim(real2str(vmax(i)))
       end do
     end if
     if (present(min_value)) min_value = vmin 
