@@ -370,11 +370,12 @@ contains
     real(rb),      intent(in) :: value(np,npoints)
     logical,       intent(in) :: print
     real(rb),      intent(out), optional :: max_value(np), min_value(np), mean(np), variance(np)
-    real(rb) :: vmax(np), vmin(np), avg(np), var(np)
-    real(rb) :: acc(np), acc2(np)
+    real(rb) :: vmax(np), vmin(np), avg(np), var(np), slope(np)
+    real(rb) :: acc(np), acc2(np), accprog(np), N
     integer :: i
     acc = value(:,1)
     acc2 = acc*acc
+    accprog = acc
     vmin = acc
     vmax = acc
     do i = 2, npoints
@@ -382,14 +383,19 @@ contains
       vmax = max(vmax,value(:,i))
       acc = acc + value(:,i)
       acc2 = acc2 + value(:,i)**2
+      accprog = accprog + real(i,rb)*value(:,i)
     end do
-    avg = acc/real(npoints,rb)
-    var = acc2/real(npoints,rb) - avg**2
+    N = real(npoints,rb)
+    avg = acc/N
+    var = acc2/N - avg**2
+    slope = 12.0_rb*(accprog/N - 0.5_rb*(N+1)*avg)/(N*N - 1.0_rb)
     if (print) then
-      if (print_titles) call write_str( 6, ["property","mean    ","std_dev ","minimum ","maximum "], delim )
+      if (print_titles) call write_str( 6, ["property","mean    ","std_dev ",        &
+                                            "minimum ","maximum ","slope   "], delim )
       do i = 1, np
-        write(6,'(A,4("'//delim//'",A))') trim(property(i)), trim(real2str(avg(i))), &
-          trim(real2str(sqrt(var(i)))), trim(real2str(vmin(i))), trim(real2str(vmax(i)))
+        write(6,'(A,5("'//delim//'",A))') trim(property(i)), trim(real2str(avg(i))), &
+          trim(real2str(sqrt(var(i)))), trim(real2str(vmin(i))), trim(real2str(vmax(i))), &
+          trim(real2str(slope(i)))
       end do
     end if
     if (present(min_value)) min_value = vmin 
