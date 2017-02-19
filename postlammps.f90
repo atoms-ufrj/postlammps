@@ -355,10 +355,14 @@ contains
     character(sl), intent(in) :: property(np)
     real(rb),      intent(in) :: value(np,npoints)
     integer,       intent(in), optional :: interval
-    integer :: j,n=1
+    integer :: j, n
     
+    if (present(interval)) then
+      n = interval
+    else
+      n = 1
+    endif
     if (print_titles) call write_str( 6, property, delim )
-    if (present(interval)) n=interval  
     do j = 1, npoints,n
       call write_str(6, real2str(value(:,j)), delim )
     end do
@@ -533,7 +537,7 @@ contains
     real(rb) :: g(np) 
     integer :: tal
     call Correlation_Analisys( np, property, npoints, value, .false., g ) 
-    tal = ceiling(maxval((g - 1.0) / 2.0))
+    tal = ceiling(maxval((g - 1.0_rb) / 2.0_rb))
     call Print_Properties( np, property, npoints, value, tal )
   end subroutine Subsample
 
