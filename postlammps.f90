@@ -350,14 +350,20 @@ contains
 
   !=================================================================================================
 
-  subroutine Print_Properties( np, property, npoints, value, interval )
+  subroutine Print_Properties( np, property, npoints, value, interval)
     integer,       intent(in) :: np, npoints
     character(sl), intent(in) :: property(np)
     real(rb),      intent(in) :: value(np,npoints)
     integer,       intent(in), optional :: interval
-    integer :: j
+    integer :: j, n
+    
+    if (present(interval)) then
+      n = interval
+    else
+      n = 1
+    endif
     if (print_titles) call write_str( 6, property, delim )
-    do j = 1, npoints
+    do j = 1, npoints,n
       call write_str(6, real2str(value(:,j)), delim )
     end do
   end subroutine Print_Properties
@@ -524,13 +530,15 @@ contains
 
   !=================================================================================================
 
-  subroutine Subsample( np, property, npoints, value )
+  subroutine Subsample( np, property, npoints, value)
     integer,       intent(in)  :: np, npoints
     character(sl), intent(in)  :: property(np)
     real(rb),      intent(in)  :: value(np,npoints)
-    real(rb) :: g(np)
-    call Correlation_Analisys( np, property, npoints, value, .false., g )
-    call Print_Properties( np, property, npoints, value, ceiling(maxval(g)) )
+    real(rb) :: g(np) 
+    integer :: tal
+    call Correlation_Analisys( np, property, npoints, value, .false., g ) 
+    tal = ceiling(maxval((g - 1.0_rb) / 2.0_rb))
+    call Print_Properties( np, property, npoints, value, tal )
   end subroutine Subsample
 
   !=================================================================================================
