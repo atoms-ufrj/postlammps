@@ -506,7 +506,7 @@ contains
     g = zero
     inv_n = one/real(npoints,rb)
     do i = 1, delta
-      g = g + (one - delta*inv_n)*acf(:,i)
+      g = g + (one - i*inv_n)*acf(:,i)
     end do
     g = one + two*g
     error = sqrt(g*acf(:,0)*inv_n)
