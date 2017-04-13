@@ -509,7 +509,7 @@ contains
       where (.not.positive) acf(:,delta) = zero
     end do
     forall (i=1:delta) acf(:,i) = acf(:,i)/acf(:,0)
-    g = zero
+    g = one
     inv_n = one/real(npoints,rb)
     do i = 1, delta
       g = g + (one - i*inv_n)*acf(:,i)
