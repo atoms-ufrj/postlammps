@@ -19,7 +19,7 @@ use mData_Proc
 use mString
 implicit none
 
-integer, parameter :: maxnarg = 15
+integer, parameter :: maxnarg = 20
 integer            :: narg
 character(sl)      :: arg(maxnarg)
 
@@ -209,16 +209,27 @@ contains
 
   subroutine Usage_Message
     write(6,'("Usage: postlammps [options] action [args] property-1 [property-2 ...]")')
-    write(6,'("  action = acfun or block or fluct or histo or ineff or print or props or sampl or stats")')
-    write(6,'("    acfun args = window")')
-    write(6,'("    block args = none")')
-    write(6,'("    fluct args = window")')
-    write(6,'("    histo args = nbins")')
-    write(6,'("    ineff args = none")')
-    write(6,'("    print args = none")')
-    write(6,'("    props args = none")')
-    write(6,'("    sampl args = none")')
-    write(6,'("    stats args = none")')
+    write(6,'()')
+    write(6,'("  action = acfun / block / fluct / histo / ineff / print / props / sampl / stats")')
+    write(6,'("    acfun <maxlag>: Computes autocorrelation functions (ACF) from 0 to maxlag")')
+    write(6,'("    block: Performs normalization-group blocking analysis")')
+    write(6,'("    fluct <maxlag>: Computes normalized fluctuation ACF from 0 to maxlag")')
+    write(6,'("    histo <nbins>: Builds histograms with specified number of bins")')
+    write(6,'("    ineff: Computes statistical inefficiencies and uncertainties")')
+    write(6,'("    print: Prints the values of the selected properties")')
+    write(6,'("    props: Lists all properties available in the log file")')
+    write(6,'("    sampl: Samples uncorrelated points from the original data")')
+    write(6,'("    stats: Computes basic statistics")')
+    write(6,'()')
+    write(6,'("  options = -e / -d / -in / -c / -p / -nt / -r")')
+    write(6,'("    -in <file>: Specifies the name of the log file to be processed")')
+    write(6,'("    -p: Tells postlammps to read a plain data file instead of a lammps log file")')
+    write(6,'("    -e <n>: Skips n lines between property inputs")')
+    write(6,'("    -d <delim>: Specifies the item delimiter used for output")')
+    write(6,'("       delim = space or comma or semicolon or tab")')
+    write(6,'("    -nt: Does not print property titles")')
+    write(6,'("    -c <X>: Consider only the last X% of data")')
+    write(6,'("    -r <X> <Y>: Consider only data within a specified range from X to Y")')
     stop
   end subroutine Usage_Message
 
@@ -491,7 +502,7 @@ contains
     character(sl), intent(in)  :: property(np)
     real(rb),      intent(in)  :: value(np,npoints)
     logical,       intent(in)  :: print
-    real(rb),      intent(out), optional  :: stat_ineff(np)
+    real(rb),      intent(out), optional :: stat_ineff(np)
     integer  :: i, delta
     real(rb) :: acf(np,0:npoints), avg(np), inv_n, g(np), error(np)
     logical  :: positive(np)
@@ -509,7 +520,7 @@ contains
       where (.not.positive) acf(:,delta) = zero
     end do
     forall (i=1:delta) acf(:,i) = acf(:,i)/acf(:,0)
-    g = one
+    g = zero
     inv_n = one/real(npoints,rb)
     do i = 1, delta
       g = g + (one - i*inv_n)*acf(:,i)
@@ -534,11 +545,9 @@ contains
     integer,       intent(in)  :: np, npoints
     character(sl), intent(in)  :: property(np)
     real(rb),      intent(in)  :: value(np,npoints)
-    real(rb) :: g(np) 
-    integer :: tal
-    call Correlation_Analisys( np, property, npoints, value, .false., g ) 
-    tal = ceiling(maxval((g - 1.0_rb) / 2.0_rb))
-    call Print_Properties( np, property, npoints, value, tal )
+    real(rb) :: g(np)
+    call Correlation_Analisys( np, property, npoints, value, .false., g )
+    call Print_Properties( np, property, npoints, value, ceiling(maxval(g)) )
   end subroutine Subsample
 
   !=================================================================================================
