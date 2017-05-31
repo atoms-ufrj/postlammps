@@ -19,7 +19,7 @@ use mData_Proc
 use mString
 implicit none
 
-integer, parameter :: maxnarg = 20
+integer, parameter :: maxnarg = 30
 integer            :: narg
 character(sl)      :: arg(maxnarg)
 
@@ -315,7 +315,7 @@ contains
           titles_found = .false.
         end if
         select case (line(1:12))
-          case ("Memory usage")
+          case ("Memory usage","Per MPI rank")
             titles_found = .true.
           case ("Loop time of")
             if (run_found) then
