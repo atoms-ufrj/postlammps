@@ -19,7 +19,7 @@ use mData_Proc
 use mString
 implicit none
 
-integer, parameter :: maxnarg = 30
+integer, parameter :: maxnarg = 50
 integer            :: narg
 character(sl)      :: arg(maxnarg)
 
@@ -34,7 +34,7 @@ character(sl), allocatable :: property(:)
 integer,       allocatable :: indx(:)
 real(rb),      allocatable :: value(:,:)
 
-integer       :: i, j, nbins, window, initial, final
+integer       :: i, j, nbins, window, initial, final, bmin, bmax, bsize
 character(sl) :: infile, action, line
 logical       :: read_from_file, props, plain, print_titles, range = .false.
 real(rb)      :: percentage
@@ -110,6 +110,7 @@ call get_command_argument( iarg, action )
 
 ! Check specified action:
 select case (trim(action))
+  case ("batch","obm"); n = 2
   case ("acfun","fluct","histo"); n = 1
   case ("block","ineff","print","props","sampl","stats"); n = 0
   case default; call error( "Unrecognized action", action )
@@ -119,17 +120,24 @@ props = trim(action) == "props"
 ! Read action arguments:
 if (argcount < iarg + n) call Usage_Message
 select case (trim(action))
+  case ("batch","obm")
+    call get_command_argument( iarg+1, line )
+    bmin = str2int( line )
+    call get_command_argument( iarg+2, line )
+    bmax = str2int( line )
+    if ((bmin <= 0).or.(bmax <= 0).or.(bmin > bmax)) then
+      call error( "Unacceptable minimum and maximum block sizes" )
+    end if
   case ("acfun","fluct")
-    iarg = iarg + 1
-    call get_command_argument( iarg, line )
+    call get_command_argument( iarg+1, line )
     window = str2int( line )
     if (window <= 0) call error( "Unacceptable maximum window size" )
   case ("histo")
-    iarg = iarg + 1
-    call get_command_argument( iarg, line )
+    call get_command_argument( iarg+1, line )
     nbins = str2int( line )
     if (nbins <= 0) call error( "Unacceptable number of bins" )
 end select
+iarg = iarg + n
 
 ! Read property names:
 np = argcount - iarg
@@ -201,6 +209,15 @@ select case (trim(action))
     call Subsample( np, property, npoints, value )
   case ("stats")
     call Statistics( np, property, npoints, value, print = .true. )
+  case ("batch")
+    do bsize = bmin, bmax
+      call Batch_Means( np, property, npoints, value, bsize )
+    end do
+  case ("obm")
+    do bsize = bmin, bmax
+!    bsize = floor(sqrt(real(npoints,rb)))
+      call Overlapping_Batch_Means( np, property, npoints, value, bsize )
+    end do
 end select
 
 contains
@@ -220,6 +237,7 @@ contains
     write(6,'("    props: Lists all properties available in the log file")')
     write(6,'("    sampl: Samples uncorrelated points from the original data")')
     write(6,'("    stats: Computes basic statistics")')
+    write(6,'("    obm <bmin> <bmax>: Performs overlapping batch mean analysis")')
     write(6,'()')
     write(6,'("  options = -e / -d / -in / -c / -p / -nt / -r")')
     write(6,'("    -in <file>: Specifies the name of the log file to be processed")')
@@ -549,6 +567,45 @@ contains
     call Correlation_Analisys( np, property, npoints, value, .false., g )
     call Print_Properties( np, property, npoints, value, ceiling(maxval(g)) )
   end subroutine Subsample
+
+  !=================================================================================================
+
+  subroutine Batch_Means( np, property, npoints, value, bsize )
+    integer,       intent(in)  :: np, npoints
+    character(sl), intent(in)  :: property(np)
+    real(rb),      intent(in)  :: value(np,npoints)
+    integer,       intent(in)  :: bsize
+    integer :: i, nblocks
+    real(rb) :: avg(np), acc2(np), var(np)
+    avg = sum(value,2)/npoints
+    nblocks = npoints/bsize
+    acc2 = 0.0_rb
+    do i = 1, nblocks
+      acc2 = acc2 + (sum(value(:,(i-1)*bsize+1:i*bsize),2)/bsize - avg)**2
+    end do
+    var = acc2/(real(nblocks,rb)*real(nblocks - 1,rb))
+    write(6,'(A)') trim(join([int2str(bsize),real2str(var)],delim))
+  end subroutine Batch_Means
+
+  !=================================================================================================
+
+  subroutine Overlapping_Batch_Means( np, property, npoints, value, bsize )
+    integer,       intent(in)  :: np, npoints
+    character(sl), intent(in)  :: property(np)
+    real(rb),      intent(in)  :: value(np,npoints)
+    integer,       intent(in)  :: bsize
+    integer :: i
+    real(rb) :: avg(np), blocksum(np), acc2(np), var(np)
+    avg = sum(value,2)/npoints
+    blocksum = sum(value(:,1:bsize),2)
+    acc2 = (blocksum/bsize - avg)**2
+    do i = 1, npoints-bsize
+      blocksum = blocksum - value(:,i) + value(:,i+bsize)
+      acc2 = acc2 + (blocksum/bsize - avg)**2
+    end do
+    var = bsize*acc2/(real(npoints - bsize,rb)*real(npoints - bsize + 1,rb))
+    write(6,'(A)') trim(join([int2str(bsize),real2str(var)],delim))
+  end subroutine Overlapping_Batch_Means
 
   !=================================================================================================
 

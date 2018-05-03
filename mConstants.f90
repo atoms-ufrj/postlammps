@@ -16,8 +16,8 @@ module mConstants
 !    along with Postlammps.  If not, see <http://www.gnu.org/licenses/>.
 
 integer,      parameter :: rb = 8
-integer,      parameter :: sl = 256
-character(3), parameter :: csl = "256"
+integer,      parameter :: sl = 1024
+character(4), parameter :: csl = "1024"
 real(rb), parameter :: zero  = 0.0_rb, &
                        half  = 0.5_rb, &
                        one   = 1.0_rb, &
