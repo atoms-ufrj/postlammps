@@ -19,7 +19,7 @@ use mConstants
 
 implicit none
 
-character(3), parameter, private :: delimiters = " ,;"//achar(9)
+character(4), parameter, private :: delimiters = " ,;"//achar(9)
 character,    parameter, private :: comment_mark = "#"
 
 interface join
@@ -103,6 +103,22 @@ contains
     end do
     if (word) arg(narg) = arg(narg)(1:wlen)
   end subroutine split
+
+  !=================================================================================================
+
+  function replace(s, text, rep) result( outs )
+    character(*), intent(in) :: s, text, rep
+    character(sl)            :: outs
+    integer :: i, nt, nr
+    outs = s
+    nt = len_trim(text)
+    nr = len(rep)
+		do
+      i = index(outs,text(:nt))
+      if (i == 0) exit
+      outs = outs(:i-1) // rep(:nr) // outs(i+nt:)
+    end do
+  end function replace
 
   !=================================================================================================
 

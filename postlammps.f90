@@ -25,7 +25,7 @@ character(sl)      :: arg(maxnarg)
 
 integer            :: input, iarg, argcount, n
 
-character(3), parameter :: keyword(7) = [character(3) :: "-e","-d","-in","-c","-p","-nt","-r"]
+character(3), parameter :: keyword(8) = [character(3) :: "-e","-d","-in","-c","-p","-nt","-r","-mm"]
 integer :: every
 character :: delim
 
@@ -36,7 +36,7 @@ real(rb),      allocatable :: value(:,:)
 
 integer       :: i, j, nbins, window, initial, final, bmin, bmax, bsize
 character(sl) :: infile, action, line
-logical       :: read_from_file, props, plain, print_titles, range = .false.
+logical       :: read_from_file, props, plain, print_titles, range = .false., openmm
 real(rb)      :: percentage
 
 type tLine
@@ -55,6 +55,7 @@ delim = " "
 print_titles = .true.
 read_from_file = .false.
 percentage = 100.0_rb
+openmm = .false.
 
 ! Read options:
 argcount = command_argument_count()
@@ -100,6 +101,9 @@ do while (any(keyword == line))
       plain = .true.
     case ("-nt")
       print_titles = .false.
+    case ("-mm")
+      openmm = .true.
+      plain = .true.
   end select
   iarg = iarg + 1
   call get_command_argument( iarg, line )
@@ -246,6 +250,7 @@ contains
     write(6,'("    -d <delim>: Specifies the item delimiter used for output")')
     write(6,'("       delim = space or comma or semicolon or tab")')
     write(6,'("    -nt: Does not print property titles")')
+    write(6,'("    -mm: Consider an OpenMM state-data report")')
     write(6,'("    -c <X>: Consider only the last X% of data")')
     write(6,'("    -r <X> <Y>: Consider only data within a specified range from X to Y")')
     stop
@@ -265,6 +270,12 @@ contains
     logical :: titles_found
     allocate( titles )
     read(input,'(A'//csl//')') titles % line
+    if (openmm) then
+      do while (titles % line(1:2) /= '#"')
+        read(input,'(A'//csl//')') titles % line
+      end do
+      titles % line = translateFromOpenMM(titles % line)
+    end if
     call split( titles % line, narg, arg )
     indx = 0
     do i = 1, np
@@ -350,6 +361,29 @@ contains
 
   !=================================================================================================
 
+  function translateFromOpenMM(props) result( new )
+    character(sl), intent(in) :: props
+    character(sl)             :: new
+    new = replace(props, '"Progress (%)"', 'Progress')
+    new = replace(new, '#"Step"', 'Step')
+    new = replace(new, '"Time (ps)"', 'Time')
+    new = replace(new, '"Potential Energy (kJ/mole)"', 'PotEng')
+    new = replace(new, '"Kinetic Energy (kJ/mole)"', 'KinEng')
+    new = replace(new, '"Total Energy (kJ/mole)"', 'TotEng')
+    new = replace(new, '"Temperature (K)"', 'Temp')
+    new = replace(new, '"Box Volume (nm^3)"', 'Vol')
+    new = replace(new, '"Density (g/mL)"', 'Density')
+    new = replace(new, '"Speed (ns/day)"', 'Speed')
+    new = replace(new, '"Elapsed Time (s)"', 'Elapsed')
+    new = replace(new, '"Time Remaining"', 'Remaining')
+    new = replace(new, '"Virial (kJ/mole)"', 'Virial')
+    new = replace(new, '"Pressure (atm)"', 'Press')
+    new = replace(new, '"Coulomb Energy (kJ/mole)"', 'Ecoul')
+    new = replace(new, achar(9), " ")
+  end function translateFromOpenMM
+
+  !=================================================================================================
+
   subroutine Block_Analysis( np, property, npoints, value )
     integer,       intent(in) :: np, npoints
     character(sl), intent(in) :: property(np)
@@ -385,7 +419,7 @@ contains
     real(rb),      intent(in) :: value(np,npoints)
     integer,       intent(in), optional :: interval
     integer :: j, n
-    
+
     if (present(interval)) then
       n = interval
     else
@@ -433,9 +467,9 @@ contains
           trim(real2str(slope(i)))
       end do
     end if
-    if (present(min_value)) min_value = vmin 
-    if (present(max_value)) max_value = vmax 
-    if (present(mean)) mean = avg 
+    if (present(min_value)) min_value = vmin
+    if (present(max_value)) max_value = vmax
+    if (present(mean)) mean = avg
     if (present(variance)) variance = var
   end subroutine Statistics
 
