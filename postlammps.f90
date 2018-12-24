@@ -250,7 +250,7 @@ contains
     write(6,'("    -d <delim>: Specifies the item delimiter used for output")')
     write(6,'("       delim = space or comma or semicolon or tab")')
     write(6,'("    -nt: Does not print property titles")')
-    write(6,'("    -mm: Consider an OpenMM state-data report")')
+    write(6,'("    -mm: Consider the input to be an OpenMM state-data report")')
     write(6,'("    -c <X>: Consider only the last X% of data")')
     write(6,'("    -r <X> <Y>: Consider only data within a specified range from X to Y")')
     stop
@@ -376,8 +376,11 @@ contains
     new = replace(new, '"Speed (ns/day)"', 'Speed')
     new = replace(new, '"Elapsed Time (s)"', 'Elapsed')
     new = replace(new, '"Time Remaining"', 'Remaining')
-    new = replace(new, '"Virial (kJ/mole)"', 'Virial')
-    new = replace(new, '"Pressure (atm)"', 'Press')
+    new = replace(new, '"Atomic Virial (kJ/mole)"', 'Virial')
+    new = replace(new, '"Nonbonded Virial (kJ/mole)"', 'NBVirial')
+    new = replace(new, '"Atomic Pressure (atm)"', 'Press')
+    new = replace(new, '"Molecular Virial (kJ/mole)"', 'MolVirial')
+    new = replace(new, '"Molecular Pressure (atm)"', 'MolPress')
     new = replace(new, '"Coulomb Energy (kJ/mole)"', 'Ecoul')
     new = replace(new, achar(9), " ")
   end function translateFromOpenMM
