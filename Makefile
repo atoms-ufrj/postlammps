@@ -1,4 +1,4 @@
-FORT    = gfortran
+FORT    ?= gfortran
 FOPTS   = -O3 -march=native -ffast-math -funroll-loops -fstrict-aliasing -cpp -Wunused
 
 all: postlammps
