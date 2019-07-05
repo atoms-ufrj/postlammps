@@ -246,11 +246,11 @@ contains
     write(6,'("  options = -e / -d / -in / -c / -p / -nt / -r")')
     write(6,'("    -in <file>: Specifies the name of the log file to be processed")')
     write(6,'("    -p: Tells postlammps to read a plain data file instead of a lammps log file")')
+    write(6,'("    -mm: Tells postlammps to read an OpenMM state-data report")')
     write(6,'("    -e <n>: Skips n lines between property inputs")')
     write(6,'("    -d <delim>: Specifies the item delimiter used for output")')
     write(6,'("       delim = space or comma or semicolon or tab")')
     write(6,'("    -nt: Does not print property titles")')
-    write(6,'("    -mm: Consider the input to be an OpenMM state-data report")')
     write(6,'("    -c <X>: Consider only the last X% of data")')
     write(6,'("    -r <X> <Y>: Consider only data within a specified range from X to Y")')
     stop
@@ -381,6 +381,8 @@ contains
     new = replace(new, '"Atomic Pressure (atm)"', 'Press')
     new = replace(new, '"Molecular Virial (kJ/mole)"', 'MolVirial')
     new = replace(new, '"Molecular Pressure (atm)"', 'MolPress')
+    new = replace(new, '"Molecular Kinetic Energy (kJ/mole)"', 'MolKinEng')
+    new = replace(new, '"alchemical_energy"', 'AlchemEng')
     new = replace(new, '"Coulomb Energy (kJ/mole)"', 'Ecoul')
     new = replace(new, achar(9), " ")
   end function translateFromOpenMM

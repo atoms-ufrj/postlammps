@@ -1,7 +1,7 @@
 Postlammps
 ==========
 
-A tool for performing post-processing with lammps log files.
+A tool for performing post-processing with LAMMPS log files or OpenMM state data reports.
 
 
 Installation
@@ -46,6 +46,7 @@ Options
 
 **-in**: Specifies the name of the log file to be processed<br>
 **-p**: Tells postlammps to read a plain data file instead of a lammps log file<br>
+**-mm**: Tells postlammps to read an OpenMM state-data report<br>
 **-e n**: Skips n lines after every property reading<br>
 **-d delimiter**: Specifies the item delimiter used for output<br>
   delimiter = space or comma or semicolon or tab<br>
