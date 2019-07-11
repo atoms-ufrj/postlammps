@@ -382,7 +382,8 @@ contains
     new = replace(new, '"Molecular Virial (kJ/mole)"', 'MolVirial')
     new = replace(new, '"Molecular Pressure (atm)"', 'MolPress')
     new = replace(new, '"Molecular Kinetic Energy (kJ/mole)"', 'MolKinEng')
-    new = replace(new, '"alchemical_energy"', 'AlchemEng')
+    new = replace(new, '"alchemical_vdw_energy"', 'AlchemVdwEng')
+    new = replace(new, '"alchemical_coul_energy"', 'AlchemCoulEng')
     new = replace(new, '"Coulomb Energy (kJ/mole)"', 'Ecoul')
     new = replace(new, achar(9), " ")
   end function translateFromOpenMM
