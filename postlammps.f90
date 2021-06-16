@@ -116,7 +116,7 @@ call get_command_argument( iarg, action )
 select case (trim(action))
   case ("batch","obm"); n = 2
   case ("acfun","fluct","histo"); n = 1
-  case ("block","ineff","print","props","sampl","stats"); n = 0
+  case ("block","ineff","print","props","sampl","stats","rnavg"); n = 0
   case default; call error( "Unrecognized action", action )
 end select
 props = trim(action) == "props"
@@ -213,6 +213,8 @@ select case (trim(action))
     call Subsample( np, property, npoints, value )
   case ("stats")
     call Statistics( np, property, npoints, value, print = .true. )
+  case ("rnavg")
+    call Print_Properties( np, property, npoints, value, running_average = .true. )
   case ("batch")
     do bsize = bmin, bmax
       call Batch_Means( np, property, npoints, value, bsize )
@@ -241,6 +243,7 @@ contains
     write(6,'("    props: Lists all properties available in the log file")')
     write(6,'("    sampl: Samples uncorrelated points from the original data")')
     write(6,'("    stats: Computes basic statistics")')
+    write(6,'("    rnavg: Prints the running averages of the selected properties")')
     write(6,'("    obm <bmin> <bmax>: Performs overlapping batch mean analysis")')
     write(6,'()')
     write(6,'("  options = -e / -d / -in / -c / -p / -nt / -r")')
@@ -423,22 +426,38 @@ contains
 
   !=================================================================================================
 
-  subroutine Print_Properties( np, property, npoints, value, interval)
+  subroutine Print_Properties( np, property, npoints, value, interval, running_average)
     integer,       intent(in) :: np, npoints
     character(sl), intent(in) :: property(np)
     real(rb),      intent(in) :: value(np,npoints)
     integer,       intent(in), optional :: interval
-    integer :: j, n
+    logical,       intent(in), optional :: running_average
+    integer :: j, n, nacc
+    logical :: avg
+    real(rb) :: acc(np)
 
     if (present(interval)) then
       n = interval
     else
       n = 1
     endif
+    avg = present(running_average)
+    if (avg) avg = running_average
     if (print_titles) call write_str( 6, property, delim )
-    do j = 1, npoints,n
-      call write_str(6, real2str(value(:,j)), delim )
-    end do
+
+    if (avg) then
+      acc = 0.0_rb
+      nacc = 0
+      do j = 1, npoints, n
+        acc = acc + value(:,j)
+        nacc = nacc + 1
+        call write_str(6, real2str(acc/nacc), delim )
+      end do
+    else
+      do j = 1, npoints, n
+        call write_str(6, real2str(value(:,j)), delim )
+      end do
+    endif
   end subroutine Print_Properties
 
   !=================================================================================================
