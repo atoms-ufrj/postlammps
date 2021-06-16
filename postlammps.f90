@@ -115,8 +115,8 @@ call get_command_argument( iarg, action )
 ! Check specified action:
 select case (trim(action))
   case ("batch","obm"); n = 2
-  case ("acfun","fluct","histo"); n = 1
-  case ("block","ineff","print","props","sampl","stats","rnavg"); n = 0
+  case ("acfun","fluct","histo","mvavg"); n = 1
+  case ("block","ineff","print","props","sampl","stats"); n = 0
   case default; call error( "Unrecognized action", action )
 end select
 props = trim(action) == "props"
@@ -132,7 +132,7 @@ select case (trim(action))
     if ((bmin <= 0).or.(bmax <= 0).or.(bmin > bmax)) then
       call error( "Unacceptable minimum and maximum block sizes" )
     end if
-  case ("acfun","fluct")
+  case ("acfun","fluct","mvavg")
     call get_command_argument( iarg+1, line )
     window = str2int( line )
     if (window <= 0) call error( "Unacceptable maximum window size" )
@@ -213,8 +213,8 @@ select case (trim(action))
     call Subsample( np, property, npoints, value )
   case ("stats")
     call Statistics( np, property, npoints, value, print = .true. )
-  case ("rnavg")
-    call Print_Properties( np, property, npoints, value, running_average = .true. )
+  case ("mvavg")
+    call Print_Properties( np, property, npoints, value, moving_average = .true. )
   case ("batch")
     do bsize = bmin, bmax
       call Batch_Means( np, property, npoints, value, bsize )
@@ -243,7 +243,7 @@ contains
     write(6,'("    props: Lists all properties available in the log file")')
     write(6,'("    sampl: Samples uncorrelated points from the original data")')
     write(6,'("    stats: Computes basic statistics")')
-    write(6,'("    rnavg: Prints the running averages of the selected properties")')
+    write(6,'("    mvavg <window>: Prints moving-window averages of the selected properties")')
     write(6,'("    obm <bmin> <bmax>: Performs overlapping batch mean analysis")')
     write(6,'()')
     write(6,'("  options = -e / -d / -in / -c / -p / -nt / -r")')
@@ -426,12 +426,12 @@ contains
 
   !=================================================================================================
 
-  subroutine Print_Properties( np, property, npoints, value, interval, running_average)
+  subroutine Print_Properties( np, property, npoints, value, interval, moving_average)
     integer,       intent(in) :: np, npoints
     character(sl), intent(in) :: property(np)
     real(rb),      intent(in) :: value(np,npoints)
     integer,       intent(in), optional :: interval
-    logical,       intent(in), optional :: running_average
+    logical,       intent(in), optional :: moving_average
     integer :: j, n, nacc
     logical :: avg
     real(rb) :: acc(np)
@@ -441,16 +441,20 @@ contains
     else
       n = 1
     endif
-    avg = present(running_average)
-    if (avg) avg = running_average
+    avg = present(moving_average)
+    if (avg) avg = moving_average
     if (print_titles) call write_str( 6, property, delim )
 
     if (avg) then
       acc = 0.0_rb
       nacc = 0
       do j = 1, npoints, n
-        acc = acc + value(:,j)
-        nacc = nacc + 1
+        if (nacc < window) then
+          acc = acc + value(:,j)
+          nacc = nacc + 1
+        else
+          acc = acc + value(:,j) - value(:,j-window)
+        endif
         call write_str(6, real2str(acc/nacc), delim )
       end do
     else
