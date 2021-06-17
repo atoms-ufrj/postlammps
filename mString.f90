@@ -197,7 +197,7 @@ contains
     real(rb), intent(in) :: r
     character(sl)        :: str
     integer :: ioerr
-    write(str,*,iostat=ioerr) r
+    write(str,*,iostat=ioerr) real(r,4)
     str = adjustl(str)
   end function real2str
 
