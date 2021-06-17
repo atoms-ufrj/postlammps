@@ -56,6 +56,7 @@ print_titles = .true.
 read_from_file = .false.
 percentage = 100.0_rb
 openmm = .false.
+window = 0
 
 ! Read options:
 argcount = command_argument_count()
@@ -178,6 +179,8 @@ do j = initial, final
 end do
 allocate( value(np,npoints) )
 
+if ((window > 0).and.(npoints < window)) call error( "Insufficient number of data points" )
+
 ! Read property values:
 current => titles
 npoints = 0
@@ -214,7 +217,7 @@ select case (trim(action))
   case ("stats")
     call Statistics( np, property, npoints, value, print = .true. )
   case ("mvavg")
-    call Print_Properties( np, property, npoints, value, moving_average = .true. )
+    call Moving_Averages( np, property, npoints, value )
   case ("batch")
     do bsize = bmin, bmax
       call Batch_Means( np, property, npoints, value, bsize )
@@ -233,7 +236,7 @@ contains
   subroutine Usage_Message
     write(6,'("Usage: postlammps [options] action [args] property-1 [property-2 ...]")')
     write(6,'()')
-    write(6,'("  action = acfun / block / fluct / histo / ineff / print / props / sampl / stats")')
+    write(6,'("  action = acfun|block|fluct|histo|ineff|print|props|sampl|stats|mvavg")')
     write(6,'("    acfun <maxlag>: Computes autocorrelation functions (ACF) from 0 to maxlag")')
     write(6,'("    block: Performs normalization-group blocking analysis")')
     write(6,'("    fluct <maxlag>: Computes normalized fluctuation ACF from 0 to maxlag")')
@@ -244,9 +247,9 @@ contains
     write(6,'("    sampl: Samples uncorrelated points from the original data")')
     write(6,'("    stats: Computes basic statistics")')
     write(6,'("    mvavg <window>: Prints moving-window averages of the selected properties")')
-    write(6,'("    obm <bmin> <bmax>: Performs overlapping batch mean analysis")')
+    ! write(6,'("    obm <bmin> <bmax>: Performs overlapping batch mean analysis")')
     write(6,'()')
-    write(6,'("  options = -e / -d / -in / -c / -p / -nt / -r")')
+    write(6,'("  options = -e|-d|-in|-c|-p|-nt|-r")')
     write(6,'("    -in <file>: Specifies the name of the log file to be processed")')
     write(6,'("    -p: Tells postlammps to read a plain data file instead of a lammps log file")')
     write(6,'("    -mm: Tells postlammps to read an OpenMM state-data report")')
@@ -426,43 +429,42 @@ contains
 
   !=================================================================================================
 
-  subroutine Print_Properties( np, property, npoints, value, interval, moving_average)
+  subroutine Print_Properties( np, property, npoints, value, interval )
     integer,       intent(in) :: np, npoints
     character(sl), intent(in) :: property(np)
     real(rb),      intent(in) :: value(np,npoints)
     integer,       intent(in), optional :: interval
-    logical,       intent(in), optional :: moving_average
-    integer :: j, n, nacc
-    logical :: avg
-    real(rb) :: acc(np)
+    integer :: j, n
 
     if (present(interval)) then
       n = interval
     else
       n = 1
     endif
-    avg = present(moving_average)
-    if (avg) avg = moving_average
-    if (print_titles) call write_str( 6, property, delim )
 
-    if (avg) then
-      acc = 0.0_rb
-      nacc = 0
-      do j = 1, npoints, n
-        if (nacc < window) then
-          acc = acc + value(:,j)
-          nacc = nacc + 1
-        else
-          acc = acc + value(:,j) - value(:,j-window)
-        endif
-        call write_str(6, real2str(acc/nacc), delim )
-      end do
-    else
-      do j = 1, npoints, n
-        call write_str(6, real2str(value(:,j)), delim )
-      end do
-    endif
+    if (print_titles) call write_str( 6, property, delim )
+    do j = 1, npoints, n
+      call write_str(6, real2str(value(:,j)), delim )
+    end do
   end subroutine Print_Properties
+
+  !=================================================================================================
+
+  subroutine Moving_Averages( np, property, npoints, value )
+    integer,       intent(in) :: np, npoints
+    character(sl), intent(in) :: property(np)
+    real(rb),      intent(in) :: value(np,npoints)
+    integer :: j
+    real(rb) :: acc(np)
+
+    if (print_titles) call write_str( 6, property, delim )
+    acc = sum(value(:,1:window),2)
+    call write_str(6, real2str(acc/window), delim )
+    do j = window+1, npoints
+      acc = acc + value(:,j) - value(:,j-window)
+      call write_str(6, real2str(acc/window), delim )
+    end do
+  end subroutine Moving_Averages
 
   !=================================================================================================
 
