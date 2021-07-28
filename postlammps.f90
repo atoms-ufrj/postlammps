@@ -209,7 +209,7 @@ select case (trim(action))
   case ("histo")
     call Build_Histograms( np, property, npoints, value, nbins )
   case ("ineff")
-    call Correlation_Analisys( np, property, npoints, value, print = .true. )
+    call Correlation_Analysis( np, property, npoints, value, print = .true. )
   case ("print")
     call Print_Properties( np, property, npoints, value )
   case ("sampl")
@@ -584,7 +584,7 @@ contains
 
   !=================================================================================================
 
-  subroutine Correlation_Analisys( np, property, npoints, value, print, stat_ineff )
+  subroutine Correlation_Analysis( np, property, npoints, value, print, stat_ineff )
     integer,       intent(in)  :: np, npoints
     character(sl), intent(in)  :: property(np)
     real(rb),      intent(in)  :: value(np,npoints)
@@ -624,7 +624,7 @@ contains
       end do
     end if
     if (present(stat_ineff)) stat_ineff = g
-  end subroutine Correlation_Analisys
+  end subroutine Correlation_Analysis
 
   !=================================================================================================
 
@@ -633,7 +633,7 @@ contains
     character(sl), intent(in)  :: property(np)
     real(rb),      intent(in)  :: value(np,npoints)
     real(rb) :: g(np)
-    call Correlation_Analisys( np, property, npoints, value, .false., g )
+    call Correlation_Analysis( np, property, npoints, value, .false., g )
     call Print_Properties( np, property, npoints, value, ceiling(maxval(g)) )
   end subroutine Subsample
 
